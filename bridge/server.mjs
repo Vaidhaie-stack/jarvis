@@ -1183,6 +1183,9 @@ wss.on('connection', (socket) => {
    * deadlocked assistant is not.
    */
   let settling = Promise.resolve()
+  /** Set when the browser asks to stop the turn, so the result it produces
+   *  is reported as an interruption rather than a failure. */
+  let interrupted = false
   let finishTurn = null
 
   const turnFinished = () =>
@@ -1386,6 +1389,16 @@ wss.on('connection', (socket) => {
                 text: msg.result ?? '',
                 costUsd: msg.total_cost_usd ?? null,
               })
+            } else if (interrupted && msg.subtype === 'error_during_execution') {
+              // Not a failure: the user spoke over him and the turn was
+              // stopped on purpose. The SDK reports that as an execution
+              // error, and logging it as one made a working barge-in look
+              // like a crash in the terminal.
+              console.log('[jarvis] turn interrupted — the user spoke over it')
+              sendTurn({
+                type: 'error',
+                message: RESULT_FAILURES[msg.subtype],
+              })
             } else {
               console.error(
                 `[jarvis] turn failed: ${msg.subtype}`,
@@ -1396,6 +1409,7 @@ wss.on('connection', (socket) => {
                 message: RESULT_FAILURES[msg.subtype] ?? RESULT_FAILURES.default,
               })
             }
+            interrupted = false
             // Whatever was waiting on this turn to finish can go now. This is
             // the only place a turn is genuinely over.
             finishTurn?.()
@@ -1479,6 +1493,7 @@ wss.on('connection', (socket) => {
     }
 
     if (msg.type === 'interrupt') {
+      interrupted = true
       // Held so the next question can wait for it rather than racing it.
       const stopped = turnFinished()
       settling = Promise.resolve(session.interrupt?.())
