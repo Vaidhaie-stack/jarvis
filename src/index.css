@@ -1,11 +1,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;600&family=JetBrains+Mono:wght@300;400&display=swap');
 
 :root {
-  /* The interface cyan. `--accent` is re-declared per phase and per panel;
+  /* The interface red. `--accent` is re-declared per phase and per panel;
      this one stays put and is what anything neutral pins itself to. */
-  --interface: #00e5ff;
+  --interface: #ff2a45;
   --accent: var(--interface);
-  --bg: #01060c;
+  --bg: #000000;
+  /* Accent-coloured text, lifted toward white: deep red on black is a glow
+     colour, not a reading colour. */
+  --accent-text: color-mix(in srgb, var(--accent) 62%, #fff4f0);
   font-family: 'Chakra Petch', system-ui, sans-serif;
   color-scheme: dark;
 }
@@ -34,8 +37,8 @@ body::after {
     radial-gradient(ellipse at center, transparent 30%, rgba(0, 0, 0, 0.55) 100%),
     repeating-linear-gradient(
       0deg,
-      rgba(0, 229, 255, 0.028) 0px,
-      rgba(0, 229, 255, 0.028) 1px,
+      rgba(255, 42, 69, 0.018) 0px,
+      rgba(255, 42, 69, 0.018) 1px,
       transparent 1px,
       transparent 3px
     );
@@ -54,7 +57,7 @@ body::after {
   inset: 0;
   z-index: 4;
   pointer-events: none;
-  color: var(--accent);
+  color: color-mix(in srgb, var(--accent) 62%, #fff4f0);
   transition: color 600ms ease;
   text-transform: uppercase;
   letter-spacing: 0.16em;
@@ -97,7 +100,7 @@ body::after {
   margin-top: 5px;
   font-size: 9px;
   letter-spacing: 0.22em;
-  opacity: 0.42;
+  opacity: 0.72;
 }
 
 .status {
@@ -142,7 +145,7 @@ body::after {
 
 .rail-title {
   font-size: 8px;
-  opacity: 0.4;
+  opacity: 0.72;
   letter-spacing: 0.34em;
   margin-bottom: 4px;
 }
@@ -153,7 +156,7 @@ body::after {
   gap: 8px;
   opacity: 0.82;
 }
-.rail-item.dim { opacity: 0.3; }
+.rail-item.dim { opacity: 0.55; }
 .rail-item.mono { font-family: 'JetBrains Mono', monospace; letter-spacing: 0.1em; }
 
 .tick {
@@ -201,7 +204,7 @@ body::after {
   padding: 7px 16px 7px 14px;
   border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent);
   border-radius: 2px;
-  background: color-mix(in srgb, var(--accent) 9%, rgba(2, 10, 12, 0.55));
+  background: color-mix(in srgb, var(--accent) 9%, rgba(8, 2, 3, 0.55));
   backdrop-filter: blur(5px);
   box-shadow: 0 0 30px color-mix(in srgb, var(--accent) 22%, transparent);
   /* Above the panels and the log so a long tool name reads cleanly, but it is a
@@ -230,7 +233,7 @@ body::after {
   max-width: min(52vw, 620px);
   overflow: hidden;
   text-overflow: ellipsis;
-  color: #f2fbff;
+  color: #fff4f0;
   text-shadow: 0 0 24px color-mix(in srgb, var(--accent) 55%, transparent);
 }
 
@@ -280,13 +283,13 @@ body::after {
   font-size: 8px;
   letter-spacing: 0.26em;
   text-transform: uppercase;
-  opacity: 0.45;
+  opacity: 0.72;
   padding-top: 3px;
 }
 
-.log-user .log-text { opacity: 0.52; }
+.log-user .log-text { opacity: 0.75; }
 .log-jarvis .log-text {
-  color: #eaf9ff;
+  color: #fff4f0;
   text-shadow: 0 0 26px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
@@ -326,7 +329,7 @@ body::after {
   right: 0;
   text-align: center;
   font-size: 9px;
-  opacity: 0.38;
+  opacity: 0.72;
   letter-spacing: 0.2em;
 }
 
@@ -527,7 +530,7 @@ kbd {
   flex: 0 0 auto;
   font-family: 'JetBrains Mono', monospace;
   font-size: 9px;
-  opacity: 0.45;
+  opacity: 0.72;
   padding-top: 2px;
 }
 
@@ -542,7 +545,7 @@ kbd {
 .hud-label {
   font-size: 12.5px;
   line-height: 1.35;
-  color: #e8f8ff;
+  color: #fff4f0;
   /* Two lines then clip — a HUD row, not a paragraph. */
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -553,7 +556,7 @@ kbd {
 .hud-sub {
   font-size: 10.5px;
   line-height: 1.35;
-  opacity: 0.5;
+  opacity: 0.72;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -564,7 +567,7 @@ kbd {
   font-size: 8px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  opacity: 0.42;
+  opacity: 0.72;
   padding-top: 3px;
 }
 
@@ -584,7 +587,7 @@ kbd {
   display: block;
   margin-top: 8px;
   font-size: 10px;
-  opacity: 0.5;
+  opacity: 0.72;
 }
 
 /* Web media -----------------------------------------------------------------
@@ -704,7 +707,7 @@ kbd {
   font-family: 'JetBrains Mono', monospace;
   font-size: 40px;
   line-height: 1;
-  color: #eafaff;
+  color: #fff4f0;
   text-shadow: 0 0 30px color-mix(in srgb, var(--accent) 65%, transparent);
 }
 
@@ -714,7 +717,7 @@ kbd {
   font-size: 9px;
   letter-spacing: 0.24em;
   text-transform: uppercase;
-  opacity: 0.5;
+  opacity: 0.72;
 }
 
 .hud-note {
@@ -722,7 +725,7 @@ kbd {
   font-size: 12px;
   line-height: 1.55;
   opacity: 0.8;
-  color: #dff4ff;
+  color: #fff4f0;
 }
 
 .hud-grid {
@@ -758,7 +761,7 @@ kbd {
 
 .hud-dim { opacity: 0.45; }
 .hud-hot {
-  color: var(--accent);
+  color: color-mix(in srgb, var(--accent) 62%, #fff4f0);
   text-shadow: 0 0 16px color-mix(in srgb, var(--accent) 60%, transparent);
 }
 
@@ -792,7 +795,7 @@ kbd {
   font-size: 13px;
   letter-spacing: 0.03em;
   text-transform: none;
-  opacity: 0.45;
+  opacity: 0.72;
 }
 
 /* --------------------------------------------------------------- ignition */
@@ -803,19 +806,19 @@ kbd {
   z-index: 7;
   display: grid;
   place-items: center;
-  background: radial-gradient(ellipse at center, #04121c 0%, #01060c 70%);
+  background: radial-gradient(ellipse at center, #140205 0%, #000000 70%);
   border: 0;
   cursor: pointer;
   font-family: inherit;
-  color: #4fd6ff;
+  color: #ff2a45;
 }
 
 .ignition-ring {
   position: absolute;
   width: 240px;
   height: 240px;
-  border: 1px solid rgba(79, 214, 255, 0.28);
-  border-top-color: rgba(79, 214, 255, 0.9);
+  border: 1px solid rgba(255, 42, 69, 0.28);
+  border-top-color: rgba(255, 42, 69, 0.9);
   border-radius: 50%;
 }
 
@@ -830,18 +833,18 @@ kbd {
   font-size: 15px;
   letter-spacing: 0.52em;
   text-indent: 0.52em; /* balance the trailing letter-space */
-  text-shadow: 0 0 30px rgba(79, 214, 255, 0.7);
+  text-shadow: 0 0 30px rgba(255, 42, 69, 0.7);
 }
 
 .ignition-sub {
   font-size: 9px;
   letter-spacing: 0.28em;
-  opacity: 0.4;
+  opacity: 0.7;
   text-transform: uppercase;
 }
 
 .ignition:hover .ignition-word {
-  text-shadow: 0 0 44px rgba(79, 214, 255, 1);
+  text-shadow: 0 0 44px rgba(255, 42, 69, 1);
 }
 
 /* ------------------------------------------------------------------- boot */
@@ -851,7 +854,7 @@ kbd {
   inset: 0;
   z-index: 6;
   background: var(--bg);
-  color: var(--accent);
+  color: color-mix(in srgb, var(--accent) 62%, #fff4f0);
   overflow: hidden;
 }
 
@@ -885,7 +888,7 @@ kbd {
   font-size: clamp(18px, 3.4vw, 40px);
   font-weight: 300;
   letter-spacing: 0.14em;
-  color: #eafcff;
+  color: #fff4f0;
   text-shadow: 0 0 26px color-mix(in srgb, var(--accent) 60%, transparent);
 }
 .boot-dots { opacity: 0.6; margin: 0 0.2em; }
@@ -948,7 +951,7 @@ kbd {
   filter: drop-shadow(0 0 4px color-mix(in srgb, var(--accent) 50%, transparent));
 }
 .boot-name {
-  fill: #eafcff;
+  fill: #fff4f0;
   font-family: 'JetBrains Mono', monospace;
   font-size: 20px;
   text-anchor: middle;
@@ -977,7 +980,7 @@ kbd {
   stroke: color-mix(in srgb, var(--accent) 30%, transparent);
   stroke-width: 8;
 }
-.boot-r-on { stroke: #dffbff; filter: drop-shadow(0 0 8px var(--accent)); }
+.boot-r-on { stroke: #fff0d6; filter: drop-shadow(0 0 8px var(--accent)); }
 .boot-r-ring {
   fill: none;
   stroke: var(--accent);
@@ -987,18 +990,18 @@ kbd {
 .boot-r-ring-in { stroke-width: 1.5; opacity: calc(0.2 + var(--glow) * 0.5); }
 .boot-r-tri {
   fill: color-mix(in srgb, var(--accent) calc(var(--glow) * 45%), transparent);
-  stroke: #eafcff;
+  stroke: #fff4f0;
   stroke-width: 3;
   stroke-linejoin: round;
   filter: drop-shadow(0 0 calc(var(--glow) * 26px) var(--accent));
 }
 .boot-r-tri-in {
-  fill: color-mix(in srgb, #eafcff calc(var(--glow) * 60%), transparent);
+  fill: color-mix(in srgb, #fff4f0 calc(var(--glow) * 60%), transparent);
   stroke: none;
 }
 .boot-r-v {
   fill: none;
-  stroke: #05161a;
+  stroke: #1a0507;
   stroke-width: 3.5;
   stroke-linejoin: round;
   stroke-linecap: round;
@@ -1165,7 +1168,7 @@ kbd {
      word that has been mistyped. */
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.92em;
-  color: var(--accent);
+  color: color-mix(in srgb, var(--accent) 62%, #fff4f0);
   opacity: 0.62;
   text-shadow: 0 0 16px color-mix(in srgb, var(--accent) 70%, transparent);
 }
@@ -1268,7 +1271,7 @@ kbd {
   font-size: 10px;
   letter-spacing: 0.3em;
   text-transform: uppercase;
-  color: #e6f9ff;
+  color: #fff4f0;
   text-shadow:
     0 0 18px var(--accent),
     0 0 44px color-mix(in srgb, var(--accent) 55%, transparent);
@@ -1431,7 +1434,7 @@ kbd {
 }
 
 .fx-glitch::before { background: rgba(255, 40, 90, 0.13) }
-.fx-glitch::after  { background: rgba(40, 220, 255, 0.13); animation-direction: reverse }
+.fx-glitch::after  { background: rgba(255, 200, 60, 0.13); animation-direction: reverse }
 
 @keyframes fxChroma {
   0%, 100% { transform: translateX(0);    opacity: 0 }
@@ -1495,20 +1498,20 @@ kbd {
   max-height: calc(100vh - 2rem);
   overflow-y: auto;
   padding: 0.75rem 0.9rem;
-  background: rgba(2, 10, 12, 0.94);
-  border: 1px solid var(--accent, #19d8d2);
+  background: rgba(8, 2, 3, 0.94);
+  border: 1px solid var(--accent, #ff2a45);
   border-radius: 2px;
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
   font-size: 0.72rem;
   line-height: 1.6;
-  color: #cfe6e3;
+  color: #f3dcd8;
   pointer-events: none;
   backdrop-filter: blur(6px);
 }
 
 .diag-head {
   letter-spacing: 0.18em;
-  color: var(--accent, #19d8d2);
+  color: color-mix(in srgb, var(--accent, #ff2a45) 62%, #fff4f0);
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   padding-bottom: 0.4rem;
   margin-bottom: 0.5rem;
@@ -1525,7 +1528,7 @@ kbd {
 .diag-sec {
   margin: 0.7rem 0 0.3rem;
   letter-spacing: 0.16em;
-  color: #6d8886;
+  color: #a08480;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   padding-top: 0.45rem;
 }
@@ -1536,8 +1539,8 @@ kbd {
   gap: 0.5rem;
 }
 
-.diag-k { color: #6d8886; }
-.diag-v { color: #cfe6e3; overflow-wrap: anywhere; }
+.diag-k { color: #a08480; }
+.diag-v { color: #f3dcd8; overflow-wrap: anywhere; }
 .diag-ok { color: #3ef2a8; }
 .diag-bad { color: #ff6b6b; }
 
@@ -1572,8 +1575,8 @@ kbd {
   padding: 0;
   background: linear-gradient(
     160deg,
-    color-mix(in srgb, var(--accent) 11%, rgba(4, 12, 18, 0.94)),
-    color-mix(in srgb, var(--accent) 4%, rgba(2, 8, 12, 0.96))
+    color-mix(in srgb, var(--accent) 11%, rgba(10, 3, 4, 0.94)),
+    color-mix(in srgb, var(--accent) 4%, rgba(8, 2, 3, 0.96))
   );
   border: 1px solid color-mix(in srgb, var(--accent) 26%, transparent);
   backdrop-filter: blur(14px);
@@ -1795,7 +1798,7 @@ kbd {
   letter-spacing: 0.18em;
   color: color-mix(in srgb, var(--accent) 90%, white);
   border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
-  background: color-mix(in srgb, var(--accent) 10%, rgba(2, 8, 12, 0.8));
+  background: color-mix(in srgb, var(--accent) 10%, rgba(8, 2, 3, 0.8));
   backdrop-filter: blur(8px);
   pointer-events: none;
 }
@@ -1823,7 +1826,7 @@ kbd {
   min-width: 210px;
   padding: 11px 13px 9px;
   border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent);
-  background: color-mix(in srgb, var(--accent) 8%, rgba(2, 8, 12, 0.86));
+  background: color-mix(in srgb, var(--accent) 8%, rgba(8, 2, 3, 0.86));
   backdrop-filter: blur(10px);
   pointer-events: none;
   text-transform: none;

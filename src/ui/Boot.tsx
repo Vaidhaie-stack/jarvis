@@ -5,7 +5,7 @@ import { useStore } from '../store'
 /**
  * The start-up sequence, rebuilt to the Iron Man boot it is quoting.
  *
- * Four beats, in order, cyan on black:
+ * Four beats, in order, accent on black:
  *   1. an angular status bar — "INITIATING SYSTEM" — over a scrolling boot log,
  *      with a segmented bar filling left to right;
  *   2. concentric reticle rings assembling inward until "J.A.R.V.I.S" resolves
