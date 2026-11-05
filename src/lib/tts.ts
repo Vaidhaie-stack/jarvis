@@ -144,7 +144,7 @@ export function speakingNow(): string {
 
 /** Sentence end, allowing a closing quote or bracket — curly ones included,
  *  since models emit typographic punctuation far more often than ASCII. */
-const SENTENCE_END = /([.!?]["'')\]”’]?\s)|(\n\n)/
+const SENTENCE_END = /([.!?।॥？！。؟]["'')\]”’]?\s)|([。！？]\s?)|(\n\n)/
 
 /** Full stops that are not sentence ends. Cutting on these puts an audible
  *  gap inside "Mr. Stark" and reads as a stutter. */
@@ -221,10 +221,54 @@ export function candidateVoices(): SpeechSynthesisVoice[] {
 
 let cachedVoice: SpeechSynthesisVoice | null | undefined
 
+/**
+ * The language he speaks, as a BCP-47 code. Set by the bridge from his saved
+ * settings, and changed by voice ("speak Hindi"). Everything English keeps the
+ * butler ranking above; any other language takes the best installed voice for
+ * it, since a British baritone reading Tamil is no use to anyone.
+ */
+let speechLang = 'en-GB'
+const isEnglish = () => /^en/i.test(speechLang)
+
+export function setSpeechLanguage(lang: string) {
+  if (!lang || lang === speechLang) return
+  speechLang = lang
+  cachedVoice = undefined
+}
+
+function voiceForLanguage(all: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
+  const want = speechLang.toLowerCase().replace('_', '-')
+  const base = want.split('-')[0]
+  const rank = (v: SpeechSynthesisVoice) => {
+    const l = v.lang.toLowerCase().replace('_', '-')
+    let r = l === want ? 100 : l.startsWith(base) ? 50 : -1000
+    // Chrome's Google voices are the clearest of the non-English sets.
+    if (/google/i.test(v.name)) r += 20
+    if (/natural|online/i.test(v.name)) r += 15
+    return r
+  }
+  const best = all
+    .map((v) => ({ v, r: rank(v) }))
+    .filter((x) => x.r > 0)
+    .sort((a, b) => b.r - a.r)[0]
+  if (!best) {
+    console.warn(
+      `[jarvis] no ${speechLang} voice is installed — speaking it with an English voice. ` +
+        'Add the language in your system settings (Windows: Settings → Time & language → Speech).',
+    )
+  }
+  return best?.v ?? null
+}
+
 function pickVoice(): SpeechSynthesisVoice | null {
   if (cachedVoice !== undefined) return cachedVoice
   const all = speechSynthesis.getVoices()
   if (!all.length) return null // not loaded yet — try again next utterance
+
+  if (!isEnglish()) {
+    const v = voiceForLanguage(all)
+    if (v) return (cachedVoice = v)
+  }
 
   // Honour an explicit choice made with the voice picker. A saved name that no
   // longer resolves is dropped rather than left to resurrect itself silently
@@ -387,7 +431,8 @@ export function createSpeaker(): Speaker {
       diag.engine = 'elevenlabs'
       return fetchCloudAudio(text).catch(() => null)
     }
-    if (TTS_ENGINE === 'kokoro' && !kokoro.isUnavailable()) {
+    // Kokoro only speaks English, so any other language goes to the system voice.
+    if (TTS_ENGINE === 'kokoro' && !kokoro.isUnavailable() && isEnglish()) {
       diag.engine = 'kokoro'
       return kokoro.speak(text).catch(() => null)
     }
@@ -477,7 +522,7 @@ export function createSpeaker(): Speaker {
       const u = new SpeechSynthesisUtterance(text)
       const voice = pickVoice()
       if (voice) u.voice = voice
-      u.lang = voice?.lang ?? 'en-GB'
+      u.lang = voice?.lang ?? speechLang
       // Deliberate, and deliberately invariant — the character's pace does not
       // change with stakes, and that steadiness is most of the effect. This
       // lands around 130 wpm, below the median for film dialogue.

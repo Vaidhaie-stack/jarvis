@@ -77,8 +77,46 @@ const WAKE_DEBOUNCE = 1500
  * used to be silently discarded, so the wake word "just didn't work" with no
  * indication why. Better a rare false wake than a name that does not answer.
  */
-const WAKE =
-  /\b(?:hey|hi|ok|okay|yo)?\s*(?:jarvis|jarvys|jervis|jarvis's|travis|jarviss|java's|jarv)\b(?!'s)/i
+const JARVIS_ALIASES = "jarvis|jarvys|jervis|jarvis's|travis|jarviss|java's|jarv"
+
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+/**
+ * The name alternation the wake word is built from. A custom name (set by
+ * voice, or JARVIS_NAME on the bridge) is added in front of the Jarvis
+ * aliases rather than replacing them, so "Jarvis" always still works — a
+ * renamed assistant that can no longer be woken by the name on the README is
+ * the worse failure.
+ */
+let names = JARVIS_ALIASES
+export const nameAlternation = () => names
+
+const buildWake = () =>
+  new RegExp(`\\b(?:hey|hi|ok|okay|yo)?\\s*(?:${names})\\b(?!'s)`, 'i')
+
+let WAKE = buildWake()
+
+/** Change what he answers to. Takes effect on the next thing heard. */
+export function setWakeName(name: string) {
+  const custom = name.trim().toLowerCase()
+  names =
+    custom && custom !== 'jarvis'
+      ? `${escapeRe(custom)}|${JARVIS_ALIASES}`
+      : JARVIS_ALIASES
+  WAKE = buildWake()
+}
+
+/** The language the browser recogniser listens in. */
+let recLang = 'en-GB'
+let restartRecogniser: (() => void) | null = null
+
+/** Switch the listening language. The live recogniser is restarted so the
+ *  change applies straight away rather than at its next natural restart. */
+export function setVoiceLanguage(lang: string) {
+  if (!lang || lang === recLang) return
+  recLang = lang
+  restartRecogniser?.()
+}
 
 /** Everything after the wake phrase, which is usually the actual command. */
 function afterWake(text: string): string {
@@ -760,7 +798,7 @@ function startBrowserVoice(h: VoiceHandlers): Voice {
     rec = new Ctor()
     rec.continuous = true
     rec.interimResults = true
-    rec.lang = 'en-GB'
+    rec.lang = recLang
     rec.onstart = () => {
       running = true
       diag.running = true
@@ -792,6 +830,16 @@ function startBrowserVoice(h: VoiceHandlers): Voice {
   }
 
   spin()
+
+  // A language change stops the live recogniser; its onend respins it with
+  // the new language.
+  restartRecogniser = () => {
+    try {
+      rec?.stop()
+    } catch {
+      /* already stopping */
+    }
+  }
 
   // The heartbeat. If nothing has been heard from the engine for a while it has
   // gone quiet on us — tear it down and build a fresh one.

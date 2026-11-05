@@ -69,6 +69,13 @@ export function watchUi(fn: (op: string, args: any) => void): void {
   if (usingBridge) bridge.watchUi(fn)
 }
 
+/** Reminders and timers come from the bridge's scheduler, so the direct path
+ *  has none. */
+export type { Reminder } from './bridge'
+export function watchReminders(fn: (r: bridge.Reminder) => void): void {
+  if (usingBridge) bridge.watchReminders(fn)
+}
+
 /**
  * The one thing the bridge asks US for.
  *

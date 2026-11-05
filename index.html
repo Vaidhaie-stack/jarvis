@@ -43,7 +43,8 @@
       espeak-ng WASM, blob: workers for the wake-word engine and the speech
       model, ws: for both the bridge and Vite's HMR socket, https: for the
       model download and the speech API, and 'unsafe-inline' scripts for the
-      React Fast Refresh preamble Vite injects in dev.
+      React Fast Refresh preamble Vite injects in dev. media-src names SomaFM,
+      the only stations the radio tool can play (see bridge/assistant.mjs).
     -->
     <meta
       http-equiv="Content-Security-Policy"
@@ -58,7 +59,7 @@
         font-src 'self' data: https://fonts.gstatic.com;
         connect-src 'self' data: blob: https: ws: wss: http://localhost:8787 http://127.0.0.1:8787;
         worker-src 'self' blob:;
-        media-src 'self' data: blob: http://localhost:8787 http://127.0.0.1:8787;
+        media-src 'self' data: blob: http://localhost:8787 http://127.0.0.1:8787 https://*.somafm.com;
       "
     />
 

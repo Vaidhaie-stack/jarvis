@@ -34,6 +34,7 @@ type Frame = {
   mode?: string
   seconds?: number
   when?: string
+  spoken?: string
   servers?: Array<string | { name?: string }>
 }
 
@@ -98,6 +99,14 @@ export function watchBlades(fn: (blade: Blade) => void) {
 let onUi: ((op: string, args: any) => void) | null = null
 export function watchUi(fn: (op: string, args: any) => void) {
   onUi = fn
+}
+
+/** A reminder or timer coming due. Fired by the bridge's own scheduler, not by
+ *  a turn, so it can arrive at any moment — including mid-answer. */
+export type Reminder = { id: string; text: string; spoken: string }
+let onReminder: ((r: Reminder) => void) | null = null
+export function watchReminders(fn: (r: Reminder) => void) {
+  onReminder = fn
 }
 
 /**
@@ -207,6 +216,12 @@ function dispatch(ws: WebSocket) {
       // A `ui` frame with no args is normal — reset and clear take none — so an
       // absent args object is an empty one, not a reason to drop the command.
       onUi?.(msg.op, (msg.args ?? {}) as Record<string, unknown>)
+    } else if (msg.type === 'reminder' && msg.text) {
+      onReminder?.({
+        id: msg.id ?? '',
+        text: msg.text,
+        spoken: msg.spoken ?? `A reminder. ${msg.text}`,
+      })
     }
   })
 }

@@ -21,6 +21,14 @@ import { displayServer } from './panels.mjs'
 import { uiServer } from './ui.mjs'
 import { chromeAvailable, chromeServer } from './chrome.mjs'
 import { visionServer } from './vision.mjs'
+import {
+  addClient,
+  assistantServer,
+  getSettings,
+  promptAdditions,
+  startReminders,
+  DATA_DIR,
+} from './assistant.mjs'
 import { homedir, tmpdir } from 'node:os'
 import { readFileSync, realpathSync } from 'node:fs'
 import { readFile, realpath, stat } from 'node:fs/promises'
@@ -96,7 +104,8 @@ function originAllowed(origin) {
  * runs a shell, or changes the world waits for JARVIS_ALLOW_WRITES=1. Start
  * without it, and turn it on once you trust what you're demoing.
  */
-const ALLOW_WRITES = process.env.JARVIS_ALLOW_WRITES === '1'
+const ALLOW_WRITES =
+  process.env.JARVIS_ALLOW_WRITES === '1' || process.argv.includes('--writes')
 
 /**
  * The orchestrator model. Override with JARVIS_MODEL to trade quality for pace
@@ -119,7 +128,7 @@ const MODEL = process.env.JARVIS_MODEL ?? 'claude-opus-5'
  * matters more than pace; drop back to 'low' when filming and every second of
  * dead air shows.
  */
-const EFFORT = process.env.JARVIS_EFFORT ?? 'high'
+const EFFORT = process.env.JARVIS_EFFORT ?? 'medium'
 
 /**
  * Both spellings of every renamed built-in are listed on purpose. The SDK
@@ -278,6 +287,12 @@ function decideTool(name) {
     // and the real gate is the browser's own camera permission plus an
     // indicator the user can see for as long as it is live.
     if (server === 'jarvis_eyes') return true
+
+    // Memory, reminders, settings, weather, news and the radio. Everything it
+    // writes is its own JSON in ~/.jarvis and everything it reads is public
+    // weather and headlines, so none of it waits for ALLOW_WRITES — and the
+    // verb rules below would wrongly hold back `set_reminder` and `remember`.
+    if (server === 'jarvis_assistant') return true
 
     const tool = mcpToolOf(name)
     if (EFFECTFUL_VERB.test(tool) && !VETO_EXEMPT.has(`${server}__${tool}`)) {
@@ -1005,9 +1020,18 @@ console.log(
   `[jarvis] speech ${elevenKey() ? 'via ElevenLabs (key from MCP config)' : 'using browser fallback voice'}`,
 )
 console.log(`[jarvis] model ${MODEL} · effort ${EFFORT}`)
+{
+  const s = getSettings()
+  console.log(
+    `[jarvis] name ${s.name} · ${s.persona} · ${s.language}` +
+      (s.city ? ` · ${s.city}` : '') +
+      ` · memory in ${DATA_DIR}`,
+  )
+}
+startReminders()
 console.log(
   `[jarvis] writes ${ALLOW_WRITES ? 'ENABLED' : 'disabled'}` +
-    (ALLOW_WRITES ? '' : ' — set JARVIS_ALLOW_WRITES=1 to permit shell/file/device actions'),
+    (ALLOW_WRITES ? '' : ' — run `npm start -- --writes` to permit shell/file/device actions'),
 )
 // Asynchronous, so it lands a beat after the rest of the banner. Worth printing
 // at all because an extension that is simply not running is indistinguishable
@@ -1047,6 +1071,12 @@ wss.on('connection', (socket) => {
   socket.send(
     JSON.stringify({ type: 'ready', servers: Object.keys(MCP_SERVERS) }),
   )
+
+  // Reminders are fired to every open tab, and this one sends the browser its
+  // wake word and language straight away.
+  const dropClient = addClient((msg) => {
+    if (socket.readyState === socket.OPEN) socket.send(JSON.stringify(msg))
+  })
 
   /** Resolves the pending user message into the SDK's input generator. */
   let deliver = null
@@ -1179,6 +1209,10 @@ wss.on('connection', (socket) => {
     // interface is the interface talking about itself, not work being done for
     // the user, and the badge would be describing the very thing they can see.
     if (name.startsWith('mcp__jarvis_ui__')) return
+    // Memory, reminders, settings and the radio answer instantly from local
+    // files. A "working on it" line for a lookup that takes a millisecond is
+    // noise, so only the network ones — weather, news, briefing — are announced.
+    if (/^mcp__jarvis_assistant__(?!weather|news|briefing)/.test(name)) return
     if (decideTool(name)) return sendTurn({ type: 'tool', name })
     if (id) heldTools.set(id, name)
   }
@@ -1214,12 +1248,16 @@ wss.on('connection', (socket) => {
         jarvis_chrome: chromeServer({ allowWrites: ALLOW_WRITES }),
         // The camera, which unlike everything else here has to ask and wait.
         jarvis_eyes: visionServer(ask),
+        // Memory, reminders, settings, weather, news, briefing and the radio.
+        jarvis_assistant: assistantServer(send),
       },
       // A plain system prompt, not the claude_code preset. The preset is
       // tuned for a coding agent — verbose, file-oriented, and a large chunk
       // of input tokens on every turn. Replacing it makes the persona stick,
       // keeps answers short enough to speak, and cuts cost per turn.
-      systemPrompt: SYSTEM_PROMPT,
+      // Read fresh for every connection, so what he remembers, his name, his
+      // personality and his language are all current when a session begins.
+      systemPrompt: SYSTEM_PROMPT + promptAdditions(),
       // Run from the home directory so project-scoped MCP servers don't shadow
       // the global ones, and so file tools have a sane root.
       cwd: homedir(),
@@ -1456,6 +1494,7 @@ wss.on('connection', (socket) => {
 
   socket.on('close', () => {
     console.log('[jarvis] client disconnected')
+    dropClient()
     closed = true
     deliver?.(null)
     session.close?.()

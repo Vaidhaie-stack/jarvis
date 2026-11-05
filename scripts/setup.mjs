@@ -38,7 +38,14 @@ try {
 // --- Claude CLI on PATH ---------------------------------------------------
 let claudeFound = false;
 try {
-  const res = spawnSync('claude', ['--version'], { encoding: 'utf8', timeout: 10000 });
+  // On Windows npm installs the CLI as `claude.cmd`, which spawnSync cannot
+  // find without a shell, so the check used to report a working install as
+  // missing. A shell is only needed there; the argument is fixed, so it is safe.
+  const res = spawnSync('claude', ['--version'], {
+    encoding: 'utf8',
+    timeout: 10000,
+    shell: process.platform === 'win32',
+  });
   if (res.status === 0 && res.stdout) {
     claudeFound = true;
     line(tick, `Claude CLI found: ${res.stdout.trim()}`);
@@ -105,7 +112,10 @@ if (elSource) {
 
 // --- How to run ----------------------------------------------------------
 console.log('');
-console.log('To run JARVIS, open two terminals:');
+console.log('To run JARVIS, one command starts everything:');
+console.log('     npm start             # the brain and the face together');
+console.log('');
+console.log('Or, if you prefer two terminals:');
 console.log('  1)  npm run bridge      # the brain (Claude Code, headless)');
 console.log('  2)  npm run dev         # the face (open http://localhost:5173 in Chrome)');
 console.log('');

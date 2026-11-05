@@ -5,8 +5,16 @@ import { Boot } from './ui/Boot'
 import { Ignition } from './ui/Ignition'
 import { Diagnostics } from './ui/Diagnostics'
 import { useStore } from './store'
-import { startVoice, type Voice, type VoiceMode } from './lib/voice'
-import { createSpeaker, cycleVoice, currentVoiceName } from './lib/tts'
+import {
+  startVoice,
+  nameAlternation,
+  setVoiceLanguage,
+  setWakeName,
+  type Voice,
+  type VoiceMode,
+} from './lib/voice'
+import { createSpeaker, cycleVoice, currentVoiceName, setSpeechLanguage } from './lib/tts'
+import * as radio from './lib/radio'
 import * as sfx from './lib/sfx'
 import * as music from './lib/music'
 import * as hands from './lib/hands'
@@ -25,7 +33,9 @@ import {
   watchCapture,
   watchUi,
   watchConnection,
+  watchReminders,
   connectedLabels,
+  type Reminder,
   usingBridge,
   type Msg,
 } from './lib/brain'
@@ -61,13 +71,19 @@ const newId = () =>
   globalThis.crypto?.randomUUID?.() ??
   `id${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`
 
-/** The same mishearings voice.ts accepts for the wake word — otherwise a turn
- *  that woke him as "travis" gets that word sent on to the model as a question. */
-const NAME = '(?:jarvis|jarvys|jervis|travis|jarviss|java\'s|jarv)'
+/** The same names voice.ts accepts for the wake word — otherwise a turn that
+ *  woke him as "travis" gets that word sent on to the model as a question.
+ *  Built on demand, because the name can be changed by voice. */
+const NAME = () => `(?:${nameAlternation()})`
 /** A bare vocative — "Jarvis", "hey jarvis" — with nothing asked. */
-const BARE_NAME = new RegExp(`^(?:hey|hi|ok|okay|yo)?\\s*${NAME}[\\s,.!?]*$`, 'i')
+const BARE_NAME = () => new RegExp(`^(?:hey|hi|ok|okay|yo)?\\s*${NAME()}[\\s,.!?]*$`, 'i')
 /** A leading vocative on a real command: "Jarvis, what's the weather". */
-const LEADING_NAME = new RegExp(`^(?:hey|hi|ok|okay|yo)?\\s*${NAME}\\b[\\s,.:!?-]*`, 'i')
+const LEADING_NAME = () => new RegExp(`^(?:hey|hi|ok|okay|yo)?\\s*${NAME()}\\b[\\s,.:!?-]*`, 'i')
+
+/** Escape text going into a reminder blade. It is sanitised anyway; this keeps
+ *  a reminder about "<b>" reading as written. */
+const esc = (t: string) =>
+  t.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
 
 export default function App() {
   const store = useStore
@@ -295,11 +311,11 @@ export default function App() {
 
     // People keep using his name as a vocative once they're already talking to
     // him. Strip it rather than sending "jarvis" to the model as a question.
-    if (BARE_NAME.test(text)) {
+    if (BARE_NAME().test(text)) {
       listen(AWAIT_SPEECH_MS)
       return
     }
-    const said = text.replace(LEADING_NAME, '').trim()
+    const said = text.replace(LEADING_NAME(), '').trim()
     if (!said) {
       listen(AWAIT_SPEECH_MS)
       return
@@ -314,6 +330,63 @@ export default function App() {
 
   const onVoiceError = (message: string) => {
     store.getState().setError(message)
+  }
+
+  // -- reminders ------------------------------------------------------------
+
+  /**
+   * Reminders arrive whenever they fall due, which is often mid-answer. They
+   * wait for a gap — standby, or the open mic after an answer — rather than
+   * cutting him off, then take the floor like a turn of their own: the card
+   * goes up, he says it, and the mic stays open so "snooze it ten minutes"
+   * works as a reply.
+   */
+  const dueReminders = useRef<Reminder[]>([])
+  const announcing = useRef(false)
+
+  const announceReminders = async () => {
+    if (announcing.current || !dueReminders.current.length) return
+    const phase = store.getState().phase
+    if (phase !== 'dormant' && phase !== 'listening') {
+      setTimeout(() => void announceReminders(), 1000)
+      return
+    }
+    announcing.current = true
+    const r = dueReminders.current.shift()!
+    const mine = ++turn.current
+    clearIdle()
+    silence()
+
+    const s = store.getState()
+    const time = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+    s.pushBlade({
+      id: `reminder-${r.id || newId()}`,
+      title: 'REMINDER',
+      kind: 'markup',
+      html:
+        `<div class="hud-rows"><div class="hud-row"><span class="hud-main">` +
+        `<span class="hud-label">${esc(r.text)}</span>` +
+        `<span class="hud-sub">${esc(time)}</span></span>` +
+        `<span class="hud-tag">due</span></div></div>`,
+      size: 'compact',
+      hold: 'sticky',
+    })
+    s.pushTurn({ id: newId(), role: 'jarvis', text: r.spoken })
+    s.setPhase('speaking')
+    sfx.play('wake')
+
+    const spk = createSpeaker()
+    speaker.current = spk
+    spk.say(r.spoken)
+    try {
+      await spk.end()
+    } finally {
+      announcing.current = false
+    }
+    if (mine !== turn.current) return
+    speaker.current = null
+    listen(FOLLOW_UP_MS)
+    if (dueReminders.current.length) setTimeout(() => void announceReminders(), 1500)
   }
 
   // -- power on -------------------------------------------------------------
@@ -363,6 +436,10 @@ export default function App() {
 
     watchServers((servers) => store.getState().setConnected(servers))
     watchPanels((panel) => store.getState().pushPanel(panel))
+    watchReminders((r) => {
+      dueReminders.current.push(r)
+      void announceReminders()
+    })
     watchBlades((blade) => store.getState().pushBlade(blade))
 
     /**
@@ -444,6 +521,27 @@ export default function App() {
           break
         case 'screen':
           s.clearScreen(a.what ?? 'all')
+          break
+        case 'settings': {
+          // Sent on connect and whenever he is renamed or switches language.
+          const name = typeof a.name === 'string' ? (a.name as string) : ''
+          const lang = typeof a.language === 'string' ? (a.language as string) : ''
+          if (name) setWakeName(name)
+          if (lang) {
+            setVoiceLanguage(lang)
+            setSpeechLanguage(lang)
+            store.getState().setVoice(currentVoiceName())
+          }
+          break
+        }
+        case 'radio':
+          if (a.action === 'play' && typeof a.url === 'string') {
+            radio.play(a.url, String(a.label ?? ''), a.volume as number | undefined)
+          } else if (a.action === 'volume') {
+            radio.setVolume(Number(a.volume))
+          } else {
+            radio.stop()
+          }
           break
         default:
           console.warn('[jarvis] unknown ui op:', op, args)
@@ -556,6 +654,14 @@ export default function App() {
       live?.stop()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase])
+
+  // -- radio ducking --------------------------------------------------------
+
+  // The radio drops under his voice and under yours, and comes back up when
+  // he goes to standby.
+  useEffect(() => {
+    radio.duck(phase !== 'dormant' && phase !== 'offline' && phase !== 'boot')
   }, [phase])
 
   // -- level pump + keys ----------------------------------------------------

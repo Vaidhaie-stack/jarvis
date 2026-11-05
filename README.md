@@ -38,6 +38,13 @@ can have — Node.js and Chrome. That's the whole list.
 Run `npm run setup` after cloning and it checks all of this for you, in plain
 language.
 
+**On Windows**, use PowerShell. Newer npm versions block package install
+scripts; Claude Code needs its own, so install it with
+`npm install -g --allow-scripts=@anthropic-ai/claude-code @anthropic-ai/claude-code`.
+The warnings `npm install` prints about JARVIS's own blocked scripts (`esbuild`,
+`onnxruntime-node`, `protobufjs`, `sharp`) are safe to ignore. Environment
+variables are set like this in PowerShell: `$env:JARVIS_CITY="Chennai"; npm start`.
+
 ---
 
 ## Quick start
@@ -191,6 +198,49 @@ chose.
 
 ---
 
+## Personal assistant
+
+JARVIS keeps a small amount of state of his own, on your machine, in
+`~/.jarvis/` (`C:\Users\<you>\.jarvis\` on Windows): `memory.json`,
+`reminders.json` and `settings.json`. They are plain JSON — read them, edit
+them, or delete them to start fresh. The tools live in `bridge/assistant.mjs`
+and run in read-only mode, because everything they write is their own files.
+
+| Feature | Try saying |
+|---|---|
+| **Memory** — kept across restarts and added to every new conversation | *"Remember my exam is on the twentieth of November."* · *"When is my exam?"* · *"Forget my exam."* |
+| **Reminders & timers** — spoken aloud when due, with a card on screen; one that falls due while JARVIS is closed is delivered when you next open him | *"Remind me in twenty-five minutes to take a break."* · *"Remind me every day at nine to check my email."* · *"What reminders do I have?"* · *"Cancel the email reminder."* |
+| **Weather** — Open-Meteo, no key needed | *"What's the weather?"* · *"Will it rain in Mumbai tomorrow?"* |
+| **News** — Google News headlines for your region | *"What's the latest news?"* · *"Any cricket news?"* |
+| **Daily briefing** — date, weather, reminders and headlines in one go | *"Good morning, Jarvis."* · *"Brief me."* |
+| **Radio** — ad-free SomaFM stations: focus, lofi, ambient, space, jazz, lounge, electronic, indie, classic, cafe | *"Play some focus music."* · *"Switch to jazz."* · *"Volume twenty."* · *"Stop the music."* |
+| **Languages** — he listens and speaks in the language you choose | *"Speak Hindi from now on."* · *"Switch to Tamil."* · *"Back to English."* |
+| **Custom name / wake word** — "Jarvis" always still works too | *"Call yourself Friday."* → then *"Hey Friday"* |
+| **Personality** — `classic`, `friendly`, `funny`, `formal`, `teacher`, `coach`, or describe your own | *"Be more friendly."* · *"Be my study teacher."* · *"Act like a productivity coach."* |
+| **Form of address** | *"Call me ma'am."* · *"Call me Sam."* · *"Don't call me sir."* |
+| **Home city & news region** | *"I live in Chennai."* · *"Show me Indian news."* |
+
+**Languages.** For speech in another language Chrome needs a voice for it.
+Most Indian and European languages have a Google voice built into Chrome; if
+JARVIS speaks the language with an English accent, add the language's speech
+pack in your system settings (Windows: Settings → Time & language → Speech).
+With an ElevenLabs key both directions are multilingual automatically.
+
+**Radio** plays best through headphones — through speakers the microphone hears
+the music too. It drops to a murmur whenever you or JARVIS are talking.
+
+### Using JARVIS for productive work
+
+- **Start the day:** *"Good morning"* — the date, weather, your reminders and the headlines.
+- **Focus sessions:** *"Play focus music and remind me in twenty-five minutes."* Then *"Remind me in five minutes to get back to work."* That's the Pomodoro technique, hands-free.
+- **Never forget:** tell him deadlines, birthdays and to-dos as they come up — *"Remember the project is due Friday."* He brings them up when they matter.
+- **Study:** *"Be my teacher"*, then *"Explain photosynthesis simply"* or *"Quiz me on the French Revolution."*
+- **Research:** *"Summarise the latest on electric cars"* — the summary goes on screen, he says the gist.
+- **Write:** *"Draft a polite email asking for leave tomorrow."* The draft appears on a blade to copy.
+- **Decide:** *"Compare these two laptops for programming"* or *"Give me pros and cons of learning Rust."*
+
+---
+
 ## Controls
 
 | Key / phrase | Does |
@@ -226,13 +276,22 @@ Everything is optional in bridge mode. Frontend settings live in `.env.local`
 |---|---|---|
 | `JARVIS_BRIDGE_PORT` | `8787` | Port for the WebSocket + HTTP endpoints |
 | `JARVIS_MODEL` | `claude-opus-5` | Model to run |
-| `JARVIS_EFFORT` | `medium` | Reasoning effort |
+| `JARVIS_EFFORT` | `medium` | Reasoning effort (`low` is fastest and uses the least of your plan) |
 | `JARVIS_ALLOW_WRITES` | off | `1` allows effectful tools (see below) |
 | `JARVIS_ALLOWED_ORIGINS` | local dev | Extra WebSocket origins to accept |
 | `JARVIS_ALLOW_NO_ORIGIN` | off | Accept connections with no `Origin` header |
 | `JARVIS_FILE_ROOTS` | — | Roots the `/file` endpoint may serve from |
 | `JARVIS_VOICE_ID` | — | ElevenLabs voice id |
 | `ELEVENLABS_API_KEY` | — | Optional; enables the ElevenLabs voice + Scribe |
+| `JARVIS_NAME` | `Jarvis` | His name and wake word (changeable by voice) |
+| `JARVIS_ADDRESS` | `sir` | How he addresses you; empty for nothing |
+| `JARVIS_PERSONA` | `classic` | `classic`, `friendly`, `funny`, `formal`, `teacher`, `coach` |
+| `JARVIS_LANGUAGE` | `en-GB` | Language to listen and speak in, e.g. `hi-IN`, `ta-IN` |
+| `JARVIS_CITY` | — | Home city for weather and the briefing |
+| `JARVIS_NEWS_REGION` | `US:en` | Google News edition, e.g. `IN:en`, `GB:en`, `IN:hi` |
+| `JARVIS_DATA_DIR` | `~/.jarvis` | Where memory, reminders and settings are kept |
+
+Anything you change by voice is saved in `settings.json` and wins over these.
 
 ### Frontend (`.env.local`)
 
@@ -267,12 +326,14 @@ interface for a confirmation dialog, so the decision is made ahead of time in
 `settingSources: []`, which makes its own gate the only authority — filesystem
 settings and any global `bypassPermissions` cannot override it.
 
-To allow effectful tools (phone, browser driving, sending), run the bridge this
-way instead:
+To allow effectful tools (phone, browser driving, sending), start JARVIS this
+way instead (works on Windows, macOS and Linux):
 
 ```bash
-npm run bridge:writes
+npm start -- --writes
 ```
+
+or, with two terminals, `npm run bridge:writes` in place of `npm run bridge`.
 
 > Read `decideTool()` before you do. *"Hey Jarvis, clean up my downloads folder"*
 > means something rather different with writes enabled.
