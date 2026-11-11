@@ -759,6 +759,14 @@ export default function App() {
 
       // Escape stands the whole thing down — the one thing the old build had
       // no key for at all.
+      // R toggles recording mode: a clean frame for screen captures.
+      if (e.key === 'r' && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault()
+        const st = store.getState()
+        st.setRecording(!st.recording)
+        return
+      }
+
       if (e.key === 'Escape') {
         e.preventDefault()
         if (store.getState().phase !== 'offline') goDormant()

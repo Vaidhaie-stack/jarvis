@@ -252,6 +252,7 @@ the music too. It drops to a murmur whenever you or JARVIS are talking.
 | **Escape** | Stand down |
 | **D** | Live diagnostics panel |
 | **T** | One-line audio self-test |
+| **R** | Recording mode — hides hints, errors and suggestions for a clean screen recording (or open `http://localhost:5173/?record`) |
 
 ---
 

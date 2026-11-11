@@ -159,6 +159,7 @@ export function Hud() {
   const gestures = useStore((s) => s.gestures)
   const looking = useStore((s) => s.looking)
   const ui = useStore((s) => s.ui)
+  const recording = useStore((s) => s.recording)
 
   // accentFor folds JARVIS's overrides in over the phase colour, so one
   // variable on the root carries a theme change into every .hud-* rule without
@@ -306,10 +307,15 @@ export function Hud() {
           system it documents stays findable. */}
       <Blades />
 
-      {ui.chrome.suggestions && <Suggestions />}
+      {/* Recording mode keeps the frame clean for screen captures: no
+          "try saying" hint, no error line, no keyboard help. The camera
+          indicator below is deliberately NOT hidden — whoever is on screen
+          should always be able to see when the camera is live. */}
+      {ui.chrome.suggestions && !recording && <Suggestions />}
 
-      {error && <div className="error">{error}</div>}
+      {error && !recording && <div className="error">{error}</div>}
 
+      {!recording && (
       <footer className="hud-bottom">
         <span className="hint">
           say <b>“hey jarvis”</b> · <kbd>Space</kbd> to talk · <kbd>G</kbd> hands
@@ -321,6 +327,7 @@ export function Hud() {
           )}
         </span>
       </footer>
+      )}
 
       {/* Last, so a flash or a tear reads as being on the glass rather than
           underneath the chrome. It is pointer-events: none and unmounts the
